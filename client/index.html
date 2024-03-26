@@ -1,0 +1,38 @@
+<html>
+<header>
+    <title>Test WebScoket</title>
+</header>
+
+<body>
+
+</body>
+<script type="text/javascript">
+    let ws;
+
+    function connectWebSocket() {
+        ws = new WebSocket('ws://localhost:8081');
+
+        ws.onopen = function (event) {
+            console.log('Connected to WebSocket server');
+        };
+
+        // Event listener for when the connection encounters an error
+        ws.onerror = function (error) {
+            console.error('WebSocket error:', error);
+        };
+
+        // Event listener for incoming messages
+        ws.onmessage = function (event) {
+            console.log('Received message:', event.data);
+        };
+
+        // Event listener for when the connection is closed
+        ws.onclose = function (event) {
+            console.log('WebSocket connection closed:', event.code, event.reason);
+        };
+    }
+
+    connectWebSocket();
+</script>
+
+</html>
