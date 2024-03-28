@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SocketBuilder from '../util/socket';
 
 const ListDockerContainers = () => {
     const [containerList, setContainerList] = useState([]);
@@ -14,36 +15,33 @@ const ListDockerContainers = () => {
     };
 
     useEffect(() => {
-        const socket = new WebSocket('ws://localhost:8081');
+        const socket = new SocketBuilder();
 
-        socket.onopen = function (event) {
-            console.log('Connected to WebSocket server');
+        socket.onopen((event) => {
             socket.send(JSON.stringify({ method: 'get_list' }));
-        };
+        });
 
-        socket.onmessage = (event) => {
-            console.log('Got message from WebSocket server', event);
-            const data = JSON.parse(event.data);
-            if (data.method === 'get_list') {
-                setContainerList(JSON.parse(data.data));
-            }
+        socket.onmessage((messageHandler) => {
+            messageHandler
+                .on('get_list', (data) => {
+                    const containerList = JSON.parse(data.data);
+                    setContainerList(containerList);
+                })
+                .on('get_logs', (data) => {
+                    if (data) {
+                        setLogs((prev_val) => prev_val + '\n' + data.data);
+                        scrollToBottom();
+                    }
+                    if (data.err) {
+                        setLogs((prev_val) => prev_val + '\n' + data.err);
+                        scrollToBottom();
+                    }
+                })
+        });
 
-            if (data.method === 'get_logs') {
-                console.log('Got logs from WebSocket server =>', data);
-                if (data.data) {
-                    setLogs((prev_val) => prev_val + '\n' + data.data);
-                    scrollToBottom();
-                }
-                if (data.err) {
-                    setLogs((prev_val) => prev_val + '\n' + data.err);
-                    scrollToBottom();
-                }
-            }
-        };
-
-        socket.onerror = function (error) {
+        socket.onerror((error) => {
             console.error('WebSocket error:', error);
-        };
+        });
 
         setWs(socket);
 
@@ -53,7 +51,6 @@ const ListDockerContainers = () => {
     }, []);
 
     const getLogs = (containerId) => {
-        console.log('called getLog', containerId);
         ws.send(JSON.stringify({ method: 'get_logs', data: { containerId } }));
     }
 

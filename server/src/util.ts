@@ -44,24 +44,34 @@ export async function getContainerLogsById(id: string): Promise<Response<string>
 export function getContainerLogsById1(id: string, ws: WebSocket): void {
     const command = 'docker';
     const args = ['logs', '-f', '--since', '$(date +%s)', id];
+    let child;
 
-    const child = spawn(command, args, { shell: true });
-    child.stdout.on('data', (data: any) => {
-        ws.send(JSON.stringify({
-            method: 'get_logs', data: data.toString() ?? ''
-        }));
-    });
+    function spawnComandThread() {
+        return spawn(command, args, { shell: true });
+    }
 
-    child.stderr.on('data', (err: any) => {
-        ws.send(JSON.stringify({
-            method: 'get_logs', data: err.toString() ?? ''
-        }));
-    });
+    function startComandThread() {
+        child = spawnComandThread();
+        child.stdout.on('data', (data: any) => {
+            ws.send(JSON.stringify({
+                method: 'get_logs', data: data.toString() ?? ''
+            }));
+        });
 
-    child.on('close', (code: number) => {
-        console.log(`child process exited with code ${code}`);
-        ws.send(JSON.stringify({
-            method: 'get_logs_error', data: 'exited with code ${code}'
-        }));
-    });
+        child.stderr.on('data', (err: any) => {
+            ws.send(JSON.stringify({
+                method: 'get_logs', data: err.toString() ?? ''
+            }));
+        });
+
+        child.on('close', (code: number) => {
+            console.log(`child process exited with code ${code}`);
+            ws.send(JSON.stringify({
+                method: 'get_logs_error', data: 'exited with code ${code}'
+            }));
+            startComandThread();
+        });
+    }
+
+    startComandThread();
 }
