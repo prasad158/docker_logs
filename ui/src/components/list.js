@@ -72,7 +72,7 @@ const ListDockerContainers = () => {
                     </tbody>
                 </table >
             </div>
-            <div className='col-md-8' contentEditable>
+            <div className='col-md-8' contentEditable style={{ backgroundColor: '#e5e5e5' }}>
                 {logs}
             </div>
         </div>

@@ -1,3 +1,5 @@
+import App from '../app'
+
 export interface Response<T> {
     success: boolean,
     data?: T,
@@ -7,7 +9,8 @@ export interface Response<T> {
 export interface Message {
     method: string,
     // id: string
-    data: {
-        containerId: string
-    }
+    data: any
 }
+
+export type EventFunction = (data: any) => any;
+export type EventTypes = "data" | "error" | "close";

@@ -1,6 +1,5 @@
-import WebSocket from 'ws';
 import util from 'util';
-import { Response } from './types';
+import { Response, EventTypes } from '../types/types';
 
 const exec = util.promisify(require('child_process').exec);
 const spawn = require('child_process').spawn;
@@ -12,13 +11,12 @@ export async function getDockerContainerList(): Promise<Response<string>> {
         return { success: false, err: stderr };
     }
 
-    console.log("stdout => ", stdout);
     stdout = stdout.split("\n");
     stdout.pop();
     return { success: true, data: '[' + stdout + ']' };
 }
 
-export async function getContainerLogsById(id: string): Promise<Response<string>> {
+export async function getContainerLogsByIdAndTime(id: string): Promise<Response<string>> {
     try {
         const { stdout: res, stderr: err } = await exec(`docker logs --since $(date +%s) ${id}`);
         if (err) {
@@ -41,7 +39,7 @@ export async function getContainerLogsById(id: string): Promise<Response<string>
     }
 }
 
-export function getContainerLogsById1(id: string, ws: WebSocket): void {
+export function getContainerLogsById(id: string, cb: (type: EventTypes, data: any) => any): void {
     const command = 'docker';
     const args = ['logs', '-f', '--since', '$(date +%s)', id];
     let child;
@@ -50,28 +48,25 @@ export function getContainerLogsById1(id: string, ws: WebSocket): void {
         return spawn(command, args, { shell: true });
     }
 
-    function startComandThread() {
+    function startCommandThread() {
         child = spawnComandThread();
         child.stdout.on('data', (data: any) => {
-            ws.send(JSON.stringify({
-                method: 'get_logs', data: data.toString() ?? ''
-            }));
+            cb('data', data);
         });
 
         child.stderr.on('data', (err: any) => {
-            ws.send(JSON.stringify({
-                method: 'get_logs', data: err.toString() ?? ''
-            }));
+            cb('error', err);
         });
 
         child.on('close', (code: number) => {
-            console.log(`child process exited with code ${code}`);
-            ws.send(JSON.stringify({
-                method: 'get_logs_error', data: 'exited with code ${code}'
-            }));
-            startComandThread();
+            console.log(`exited with code ${code}`);
+            cb('close', `exited with code ${code}`);
         });
     }
 
-    startComandThread();
+    startCommandThread();
+}
+
+export function buildDockerImage() {
+
 }

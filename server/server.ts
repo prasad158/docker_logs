@@ -1,35 +1,21 @@
-import WebSocket from 'ws';
-import { Message } from './src/types';
-import { getDockerContainerList, getContainerLogsById1 } from './src/util';
+import dotenv from 'dotenv';
+import App from './src/app';
+import { getList, getContainerLogs } from './src/controllers/docker_logs.ctrl';
+import { EventTypes } from './src/types/types';
 
-const PORT = 8081;
-const wss = new WebSocket.Server({ port: PORT }, () => {
-    console.log('server started on port ' + PORT);
+dotenv.config();
+
+const app = App.startServer(Number(process.env.PORT), () => {
+    console.log('server started on port ' + process.env.PORT);
 });
 
-wss.on('connection', function connection(ws: WebSocket) {
-    console.log('Client connected');
+app.on('get_list', async (data: any) => {
+    const list = await getList(data);
+    app.send('get_list', list.data);
+});
 
-    ws.on('message', async function (message: Buffer) {
-        const data: Message = JSON.parse(message.toString());
-
-        if (data.method === 'get_list') {
-            console.log('get_list called');
-            let list = await getDockerContainerList();
-            if (list.success) {
-                ws.send(JSON.stringify({ method: 'get_list', data: list.data }));
-            }
-        }
-
-        if (data.method === 'get_logs') {
-            const id = data.data.containerId;
-            console.log('get_logs called =>', id);
-
-            getContainerLogsById1(id, ws);
-        }
-    });
-
-    ws.on('close', function close() {
-        console.log('Client disconnected');
+app.on('get_logs', async (data: any) => {
+    getContainerLogs(data, function (type: EventTypes, res: string) {
+        app.send('get_logs', res);
     });
 });
